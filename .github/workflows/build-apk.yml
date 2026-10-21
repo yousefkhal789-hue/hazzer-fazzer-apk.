@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,10 +25,16 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android packages
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
       - name: Create Android project
         run: |
           mkdir -p app/src/main/assets
           cp index.html app/src/main/assets/index.html
+
           cat > settings.gradle <<'EOF'
           pluginManagement {
               repositories {
@@ -46,18 +53,22 @@ jobs:
           rootProject.name = "HazzerFazzer"
           include(":app")
           EOF
+
           cat > build.gradle <<'EOF'
           plugins {
               id 'com.android.application' version '8.6.1' apply false
           }
           EOF
+
           cat > app/build.gradle <<'EOF'
           plugins {
               id 'com.android.application'
           }
+
           android {
               namespace 'com.hazzerfazzer.game'
               compileSdk 35
+
               defaultConfig {
                   applicationId 'com.hazzerfazzer.game'
                   minSdk 23
@@ -67,10 +78,18 @@ jobs:
               }
           }
           EOF
+
+          mkdir -p app/src/main/java/com/hazzerfazzer/game
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="حزر فزر" android:usesCleartextTraffic="true">
-                  <activity android:name=".MainActivity" android:exported="true">
+              <application
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar"
+                  android:label="حزر فزر"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN"/>
                           <category android:name="android.intent.category.LAUNCHER"/>
@@ -79,21 +98,25 @@ jobs:
               </application>
           </manifest>
           EOF
-          mkdir -p app/src/main/java/com/hazzerfazzer/game
+
           cat > app/src/main/java/com/hazzerfazzer/game/MainActivity.java <<'EOF'
           package com.hazzerfazzer.game;
+
           import android.app.Activity;
           import android.os.Bundle;
           import android.webkit.WebView;
           import android.webkit.WebSettings;
+          import android.webkit.WebChromeClient;
+
           public class MainActivity extends Activity {
-              @Override public void onCreate(Bundle b) {
+              @Override
+              public void onCreate(Bundle b) {
                   super.onCreate(b);
                   WebView w = new WebView(this);
                   WebSettings s = w.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
-                  w.setWebChromeClient(new android.webkit.WebChromeClient());
+                  w.setWebChromeClient(new WebChromeClient());
                   setContentView(w);
                   w.loadUrl("file:///android_asset/index.html");
               }
@@ -101,8 +124,7 @@ jobs:
           EOF
 
       - name: Build APK
-        run: |
-          gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
